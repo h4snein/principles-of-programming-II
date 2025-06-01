@@ -1,0 +1,289 @@
+"""
+Assignment Activity 2: Library Management System
+This program simulates a basic library system using OOP principles:
+    - Book management (add, borrow, return)
+    - Member management (track borrowed books)
+    - Supports encapsulation, inheritance, and polymorphism
+"""
+import csv
+import os
+
+class Book:
+    def __init__(self, title, author, isbn):
+        # Initialize book attributes with encapsulated status
+        self.title = title
+        self.author = author
+        self.isbn = isbn
+        self.__status = "available"  # status is private for encapsulation
+
+    def borrow(self):
+        # Change status to 'borrowed' if book is available
+        if self.__status == "available":
+            self.__status = "borrowed"
+            return True
+        return False
+
+    def return_book(self):
+        # Reset book status to 'available'
+        self.__status = "available"
+
+    def is_available(self):
+        # Return True if book is available, otherwise False
+        return self.__status == "available"
+
+    def __str__(self):
+        # Return string representation of the book with status
+        return f"{self.title} by {self.author} (ISBN: {self.isbn}) - {self.__status}"
+
+
+class User:
+    def __init__(self, name):
+        self.name = name
+        self.borrowed_books = []
+
+    def borrow_book(self, book):
+        if book.borrow():
+            self.borrowed_books.append(book)
+            return True
+        return False
+
+    def return_book(self, book):
+        if book in self.borrowed_books:
+            book.return_book()
+            self.borrowed_books.remove(book)
+
+
+class Member(User):  # Inherits from User
+    def __init__(self, name, membership_id):
+        super().__init__(name)
+        self.membership_id = membership_id
+
+
+class Library:
+    BOOKS_FILE = "books.csv"
+    MEMBERS_FILE = "members.csv"
+
+    def __init__(self):
+        self.books = []     # List of all books
+        self.members = []   # List of registered members
+        self.load_books()
+        self.load_members()
+
+    # Load books from CSV file into the library
+    def load_books(self):
+        if os.path.exists(self.BOOKS_FILE):
+            with open(self.BOOKS_FILE, mode='r', newline='') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    book = Book(row['Title'], row['Author'], row['ISBN'])
+                    if row.get('Status', 'available') == 'borrowed':
+                        book.borrow()
+                    self.books.append(book)
+
+    # Save current books list into CSV file
+    def save_books(self):
+        with open(self.BOOKS_FILE, mode='w', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=['Title', 'Author', 'ISBN', 'Status'])
+            writer.writeheader()
+            for book in self.books:
+                status = "borrowed" if not book.is_available() else "available"
+                writer.writerow({
+                    'Title': book.title,
+                    'Author': book.author,
+                    'ISBN': book.isbn,
+                    'Status': status
+                })
+
+    # Load members from CSV file into the library
+    def load_members(self):
+        if os.path.exists(self.MEMBERS_FILE):
+            with open(self.MEMBERS_FILE, mode='r', newline='') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    member = Member(row['Name'], row['Membership_ID'])
+                    self.members.append(member)
+
+    # Save current members list into CSV file
+    def save_members(self):
+        with open(self.MEMBERS_FILE, mode='w', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=['Name', 'Membership_ID'])
+            writer.writeheader()
+            for member in self.members:
+                writer.writerow({
+                    'Name': member.name,
+                    'Membership_ID': member.membership_id
+                })
+
+    # Add a new book to the library and save changes
+    def add_book(self, book):
+        self.books.append(book)
+        self.save_books()
+
+    # Add a new member to the library and save changes
+    def add_member(self, member):
+        self.members.append(member)
+        self.save_members()
+
+    # Find a member by their name (case-insensitive)
+    def find_member_by_name(self, name):
+        for member in self.members:
+            if member.name.lower() == name.lower():
+                return member
+        return None
+
+    # Display available books, optionally filtered by ISBN or partial title
+    def display_available_books(self, search=None, by_isbn=False):
+        if by_isbn:
+            for book in self.books:
+                if book.isbn == search and book.is_available():
+                    print(book)
+                    return
+            print("No matching book found by ISBN.")
+        else:
+            found = False
+            for book in self.books:
+                if book.is_available() and (search is None or search.lower() in book.title.lower()):
+                    print(book)
+                    found = True
+            if not found:
+                print("No matching available books found.")
+
+    # List all registered members with their IDs
+    def list_members(self):
+        if not self.members:
+            print("No members registered.")
+        else:
+            for member in self.members:
+                print(f"{member.name} - ID: {member.membership_id}")
+
+    # Show all books currently borrowed by a specific member
+    def show_borrowed_books(self, name):
+        member = self.find_member_by_name(name)
+        if not member:
+            print("Member not found.")
+            return
+        if not member.borrowed_books:
+            print("No books currently borrowed.")
+            return
+        for book in member.borrowed_books:
+            print(book)
+
+    # Polymorphic method to handle different object types (Book or Member)
+    def handle_action(self, obj):
+        if isinstance(obj, Book):
+            print(f"Book info: {obj}")
+        elif isinstance(obj, Member):
+            print(f"Member: {obj.name}, ID: {obj.membership_id}")
+
+
+# --- Interactive Menu ---
+if __name__ == "__main__":
+    lib = Library()
+
+    while True:
+        print("\n--- Library System ---")
+        print("1. Add Book")
+        print("2. Add Member")
+        print("3. Borrow Book")
+        print("4. Return Book")
+        print("5. List Available Books")
+        print("6. Show Book Info")
+        print("7. List All Members")
+        print("8. List Borrowed Books by Member")
+        print("9. Exit")
+
+        choice = input("Select an option: ")
+
+        # Option 1: Add a new book to the library
+        if choice == "1":
+            title = input("Enter book title: ")
+            author = input("Enter author: ")
+            isbn = input("Enter ISBN: ")
+            book = Book(title, author, isbn)
+            lib.add_book(book)
+            print("Book added.")
+
+        # Option 2: Register a new member
+        elif choice == "2":
+            name = input("Enter member name: ")
+            membership_id = input("Enter membership ID: ")
+            member = Member(name, membership_id)
+            lib.add_member(member)
+            print(f"Member added: {name}, ID: {membership_id}")
+
+        # Option 3: Borrow a book by ISBN for a member
+        elif choice == "3":
+            isbn = input("Enter ISBN of the book to borrow: ")
+            name = input("Enter member name: ")
+            member = lib.find_member_by_name(name)
+            if not member:
+                print("Member not found.")
+                continue
+            for book in lib.books:
+                if book.isbn == isbn:
+                    if member.borrow_book(book):
+                        print(f"{name} borrowed '{book.title}'.")
+                        # Save book status changes after borrowing
+                        lib.save_books()
+                    else:
+                        print("Book is not available.")
+                    break
+            else:
+                print("Book not found.")
+
+        # Option 4: Return a borrowed book by ISBN for a member
+        elif choice == "4":
+            isbn = input("Enter ISBN of the book to return: ")
+            name = input("Enter member name: ")
+            member = lib.find_member_by_name(name)
+            if not member:
+                print("Member not found.")
+                continue
+            for book in member.borrowed_books:
+                if book.isbn == isbn:
+                    member.return_book(book)
+                    print(f"{name} returned '{book.title}'.")
+                    # Save book status changes after returning
+                    lib.save_books()
+                    break
+            else:
+                print("Book not found in borrowed list.")
+
+        # Option 5: List available books with search options
+        elif choice == "5":
+            mode = input("Search by (1) ISBN or (2) Partial Title or (3) Show All? ")
+            if mode == "1":
+                isbn = input("Enter ISBN: ")
+                lib.display_available_books(isbn, by_isbn=True)
+            elif mode == "2":
+                title = input("Enter part of book title: ")
+                lib.display_available_books(title)
+            else:
+                lib.display_available_books()
+
+        # Option 6: Show detailed information for a book by ISBN
+        elif choice == "6":
+            isbn = input("Enter ISBN to show book info: ")
+            for book in lib.books:
+                if book.isbn == isbn:
+                    lib.handle_action(book)
+                    break
+            else:
+                print("Book not found.")
+
+        # Option 7: List all registered members
+        elif choice == "7":
+            lib.list_members()
+
+        # Option 8: Show all books borrowed by a specific member
+        elif choice == "8":
+            name = input("Enter member name: ")
+            lib.show_borrowed_books(name)
+
+        # Option 9: Exit the program
+        elif choice == "9":
+            print("Exiting program.")
+            break
+
+        else:
+            print("Invalid option. Try again.")

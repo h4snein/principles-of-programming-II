@@ -1,0 +1,91 @@
+"""
+Assignment Activity 1: Mastermind Game
+--------------------------------------
+This program simulates the Mastermind game. The computer generates a random 4-digit code, and the user has 15 attempts to guess it.
+After each guess, feedback is provided:
+- 'R' indicates a correct digit in the correct position.
+- 'Y' indicates a correct digit in the wrong position.
+- 'B' indicates an incorrect digit.
+
+Author: Hasnein Chundoo
+"""
+import random
+
+def generate_code():
+    """
+    Generates a random 4-digit code as a list of integers between 0-9.
+    Returns:
+        list: A list of 4 random digits.
+    """
+    # Generate a list of 4 random digits between 0 and 9
+    return [random.randint(0, 9) for _ in range(4)]
+
+def give_feedback(code, guess):
+    """
+    Compares the user's guess with the actual code and returns feedback.
+    'R' = correct digit in correct position,
+    'Y' = correct digit in wrong position,
+    'B' = incorrect digit.
+
+    Args:
+        code (list): The correct code as a list of digits.
+        guess (list): The user's guess as a list of digits.
+
+    Returns:
+        str: A string of 4 characters containing the feedback.
+    """
+    feedback = ["B"] * 4  # Initialize feedback as all 'B' (incorrect)
+    used_code = [False] * 4  # Track which code digits have been matched
+    used_guess = [False] * 4  # Track which guess digits have been matched
+
+    # First pass: Check for correct digit and correct position
+    for i in range(4):
+        if guess[i] == code[i]:
+            feedback[i] = "R"  # Mark as correct position and digit
+            used_code[i] = True
+            used_guess[i] = True
+
+    # Second pass: Check for correct digit in wrong position
+    for i in range(4):
+        if not used_guess[i]:
+            for j in range(4):
+                if not used_code[j] and guess[i] == code[j]:
+                    feedback[i] = "Y"  # Mark as correct digit but wrong position
+                    used_code[j] = True
+                    break
+
+    return ''.join(feedback)
+
+def main():
+    """
+    Runs the main loop of the Mastermind game.
+    The user gets up to 15 attempts to guess the 4-digit code.
+    """
+    # Generate the secret code
+    code = generate_code()
+    tries = 15
+
+    for attempt in range(tries):
+        # Prompt user input and validate it
+        guess_str = input("Enter your four digit guess code: ")
+        if len(guess_str) != 4 or not guess_str.isdigit():
+            print("Invalid input. Please enter exactly 4 digits.")
+            continue
+
+        # Convert guess string to a list of integers
+        guess = [int(d) for d in guess_str]
+
+        # Check if the guess matches the code
+        if guess == code:
+            print(f"You guessed it! {code}")
+            return
+
+        # Provide feedback on the guess
+        feedback = give_feedback(code, guess)
+        print(feedback)
+
+    # If user runs out of tries, reveal the code
+    print(f"Out of tries. The correct code was: {code}")
+
+if __name__ == "__main__":
+    main()
